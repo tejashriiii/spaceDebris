@@ -1,15 +1,25 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware  
 from ultralytics import YOLO
 import cv2
 import numpy as np
 from io import BytesIO
 from PIL import Image
-import base64  # For encoding the annotated image to send back as JSON
+import base64
 
 app = FastAPI(title="Space Debris Detector API")
 
-model = YOLO("best.pt")  # This loads once when the server starts
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"], 
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],  
+)
+
+# Load model (fixed: no device in init)
+model = YOLO("best.pt", task='detect')  
 
 @app.get("/")
 def root():
@@ -23,8 +33,8 @@ async def predict(file: UploadFile = File(...)):
         image = Image.open(BytesIO(contents))
         image_np = np.array(image)  # Convert to NumPy array for YOLO
 
-        # Run YOLO prediction
-        results = model.predict(source=image_np, conf=0.25)  # conf=0.25 filters low-confidence detections
+        # Run YOLO prediction (device moved here if needed)
+        results = model.predict(source=image_np, conf=0.25, device='cpu')  # Optional: remove device='cpu' for auto
 
         # Get the annotated image (with bounding boxes drawn)
         annotated_image = results[0].plot()  # Ultralytics draws boxes, labels, conf
@@ -35,16 +45,17 @@ async def predict(file: UploadFile = File(...)):
         img_base64 = base64.b64encode(buffer).decode('utf-8')
 
         detections = []
-        for box in results[0].boxes:
-            class_id = int(box.cls) 
-            class_name = model.names[class_id] 
-            conf = float(box.conf) 
-            xyxy = box.xyxy.tolist()[0]  # Bounding box [x1, y1, x2, y2]
-            detections.append({
-                "class": class_name,
-                "confidence": conf,
-                "box": xyxy
-            })
+        if results[0].boxes is not None:  # Safety check
+            for box in results[0].boxes:
+                class_id = int(box.cls) 
+                class_name = model.names[class_id] 
+                conf = float(box.conf) 
+                xyxy = box.xyxy.tolist()[0]  # Bounding box [x1, y1, x2, y2]
+                detections.append({
+                    "class": class_name,
+                    "confidence": conf,
+                    "box": xyxy
+                })
 
         return JSONResponse(content={
             "annotated_image": img_base64,
