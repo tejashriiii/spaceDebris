@@ -189,53 +189,60 @@ function App() {
           )}
 
           {resultImage && (
-            <div className="results-container">
-              <div className="result-image-section">
+            <div className="results-horizontal">
+              <div className="result-image-wrapper">
                 <div className="image-container">
                   <img src={resultImage} alt="Detected" />
                 </div>
                 <div className="image-label">
-                  Detected Objects: {detections.length}
+                  {detections.length} {detections.length === 1 ? 'Object' : 'Objects'} Detected
+                  {detections.length > 0 && (
+                    <span className="class-summary">
+                      {' '}- {Array.from(new Set(detections.map(d => d.class))).join(', ')}
+                    </span>
+                  )}
                 </div>
               </div>
 
-              {detections.length > 0 && (
-                <div className="detections-grid">
-                  {detections.map((det, index) => (
-                    <div key={index} className="detection-card">
-                      <div className="card-header">
-                        <span className="card-number">#{index + 1}</span>
-                        <span className="card-class">{det.class}</span>
+              <div className="detections-wrapper">
+                {detections.length > 0 && (
+                  <div className="detections-scroll">
+                    {detections.map((det, index) => (
+                      <div key={index} className="detection-card">
+                        <div className="card-header">
+                          <span className="card-number">#{index + 1}</span>
+                          <span className="card-class">{det.class}</span>
+                        </div>
+                        <div className="card-body">
+                          <div className="confidence-section">
+                            <span className="confidence-label">Confidence</span>
+                            <span className="confidence-value">{(det.confidence * 100).toFixed(1)}%</span>
+                          </div>
+                          <div className="confidence-bar">
+                            <div 
+                              className="confidence-fill" 
+                              style={{ width: `${det.confidence * 100}%` }}
+                            />
+                          </div>
+                          <div className="bbox-section">
+                            <span className="bbox-label">Coordinates</span>
+                            <span className="bbox-value">
+                              [{det.box.map(c => c.toFixed(0)).join(', ')}]
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div className="card-body">
-                        <div className="confidence-section">
-                          <span className="confidence-label">Confidence</span>
-                          <span className="confidence-value">{(det.confidence * 100).toFixed(1)}%</span>
-                        </div>
-                        <div className="confidence-bar">
-                          <div 
-                            className="confidence-fill" 
-                            style={{ width: `${det.confidence * 100}%` }}
-                          />
-                        </div>
-                        <div className="bbox-section">
-                          <span className="bbox-label">Coordinates</span>
-                          <span className="bbox-value">
-                            [{det.box.map(c => c.toFixed(0)).join(', ')}]
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
 
-              {detections.length === 0 && (
-                <div className="no-detections">
-                  <p>No objects detected in this image</p>
-                  <p>The model did not find any debris or satellites with sufficient confidence</p>
-                </div>
-              )}
+                {detections.length === 0 && (
+                  <div className="no-detections">
+                    <p>No objects detected in this image</p>
+                    <p>The model did not find any debris or satellites with sufficient confidence</p>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
